@@ -1,26 +1,22 @@
-import "AaveWrapper"
-import "FungibleToken"
-import "FlowToken"
+import "AaveV3Pool"
 
-/// Creates a MORE Markets position resource at the signer's storage, wired to
-/// the signer's own FlowToken vault as the bridge fee provider.
+/// Creates a MORE Markets position under the signer. Bridge fees are paid
+/// from the AaveV3Pool *contract account's* FlowToken vault, not the
+/// signer's — keep that contract account funded.
 transaction() {
     prepare(signer: auth(BorrowValue, SaveValue, Capabilities) &Account) {
-        if signer.storage.borrow<&AaveWrapper.Position>(
-            from: AaveWrapper.PositionStoragePath
+        if signer.storage.borrow<&AaveV3Pool.Position>(
+            from: AaveV3Pool.PositionStoragePath
         ) != nil {
             return
         }
 
-        let feeProvider = signer.capabilities.storage
-            .issue<auth(FungibleToken.Withdraw) &FlowToken.Vault>(/storage/flowTokenVault)
+        let position <- AaveV3Pool.createMainnetPosition()
+        signer.storage.save(<- position, to: AaveV3Pool.PositionStoragePath)
 
-        let position <- AaveWrapper.createMainnetPosition(feeProvider: feeProvider)
-        signer.storage.save(<- position, to: AaveWrapper.PositionStoragePath)
-
-        let cap = signer.capabilities.storage.issue<&{AaveWrapper.PositionPublic}>(
-            AaveWrapper.PositionStoragePath
+        let cap = signer.capabilities.storage.issue<&{AaveV3Pool.PositionPublic}>(
+            AaveV3Pool.PositionStoragePath
         )
-        signer.capabilities.publish(cap, at: AaveWrapper.PositionPublicPath)
+        signer.capabilities.publish(cap, at: AaveV3Pool.PositionPublicPath)
     }
 }

@@ -1,85 +1,104 @@
 import Test
-import "AaveWrapper"
+import "AaveV3Pool"
+import "FlowYieldVaultsLendingStrategies"
+import "FungibleToken"
 
-/// Deploy AaveWrapper to the service account at the project-root path.
-access(all) fun deploy_aave_wrapper() {
+// -----------------------------------------------------------------------------
+// Deployments
+// -----------------------------------------------------------------------------
+
+access(all) fun deploy_aave_v3_pool() {
     let err = Test.deployContract(
-        name: "AaveWrapper",
-        path: "cadence/contracts/AaveWrapper.cdc",
+        name: "AaveV3Pool",
+        path: "cadence/contracts/AaveV3Pool.cdc",
         arguments: []
     )
     Test.expect(err, Test.beNil())
 }
 
-/// Deploy YieldVault (depends on AaveWrapper being deployed first).
-access(all) fun deploy_yield_vault() {
+access(all) fun deploy_aave_v3_price_oracle() {
     let err = Test.deployContract(
-        name: "YieldVault",
-        path: "cadence/contracts/YieldVault.cdc",
+        name: "AaveV3PriceOracle",
+        path: "cadence/contracts/AaveV3PriceOracle.cdc",
         arguments: []
     )
     Test.expect(err, Test.beNil())
 }
 
-/// Create a PYUSD0-collateral / FlowToken-debt strategy under `account`.
-access(all) fun execute_setup_pyusd_flow_strategy(account: Test.TestAccount) {
-    let result = Test.executeTransaction(Test.Transaction(
-        code: Test.readFile("cadence/transactions/SetupPyusdFlowStrategy.cdc"),
-        authorizers: [account.address],
-        signers: [account],
+access(all) fun deploy_flow_yield_vaults_interfaces() {
+    let err = Test.deployContract(
+        name: "FlowYieldVaultsInterfaces",
+        path: "cadence/contracts/FlowYieldVaultsInterfaces.cdc",
         arguments: []
-    ))
-    Test.expect(result, Test.beSucceeded())
+    )
+    Test.expect(err, Test.beNil())
 }
 
-/// Mint PYUSD0 and deposit into the account's YieldVault strategy.
-access(all) fun execute_deposit_to_pyusd_strategy(
-    account: Test.TestAccount,
-    pyusdAmount: UFix64,
-    borrowAmount: UInt256
-) {
-    let result = Test.executeTransaction(Test.Transaction(
-        code: Test.readFile("cadence/transactions/DepositToPyusdStrategy.cdc"),
-        authorizers: [account.address],
-        signers: [account],
-        arguments: [pyusdAmount, borrowAmount]
-    ))
-    Test.expect(result, Test.beSucceeded())
-}
-
-/// Poke the strategy — if Aave HF has dropped below the contract's
-/// MIN_HEALTH_FACTOR, it will repay some of its internal debt holdings.
-access(all) fun execute_rebalance_strategy(account: Test.TestAccount) {
-    let result = Test.executeTransaction(Test.Transaction(
-        code: Test.readFile("cadence/transactions/RebalanceStrategy.cdc"),
-        authorizers: [account.address],
-        signers: [account],
+access(all) fun deploy_flow_yield_vaults() {
+    let err = Test.deployContract(
+        name: "FlowYieldVaults",
+        path: "cadence/contracts/FlowYieldVaults.cdc",
         arguments: []
+    )
+    Test.expect(err, Test.beNil())
+}
+
+access(all) fun deploy_flow_yield_vaults_early_access() {
+    let err = Test.deployContract(
+        name: "FlowYieldVaultsEarlyAccess",
+        path: "cadence/contracts/FlowYieldVaultsEarlyAccess.cdc",
+        arguments: []
+    )
+    Test.expect(err, Test.beNil())
+}
+
+access(all) fun deploy_flow_yield_vaults_lending_strategies() {
+    let err = Test.deployContract(
+        name: "FlowYieldVaultsLendingStrategies",
+        path: "cadence/contracts/FlowYieldVaultsLendingStrategies.cdc",
+        arguments: []
+    )
+    Test.expect(err, Test.beNil())
+}
+
+access(all) fun deploy_mock_swapper() {
+    let err = Test.deployContract(
+        name: "MockSwapper",
+        path: "cadence/tests/mocks/MockSwapper.cdc",
+        arguments: []
+    )
+    Test.expect(err, Test.beNil())
+}
+
+/// PyusdMinter is special — it must be deployed onto the FlowEVMBridge
+/// account (0x1e4aa0b87d10b141) so it shares access(account) scope with the
+/// bridged PYUSD0 contract and can call `mintTokens`.
+access(all) fun deploy_pyusd_minter() {
+    let bridge = Test.getAccount(0x1e4aa0b87d10b141)
+    let result = Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/DeployPyusdMinter.cdc"),
+        authorizers: [bridge.address],
+        signers: [bridge],
+        arguments: [Test.readFile("cadence/tests/mocks/PyusdMinter.cdc")]
     ))
     Test.expect(result, Test.beSucceeded())
 }
 
-/// Read the Aave account data for the account's public YieldVault strategy.
-access(all) fun get_strategy_account_data(account: Test.TestAccount): AaveWrapper.AccountData {
-    let result = Test.executeScript(
-        Test.readFile("cadence/scripts/GetStrategyAccountData.cdc"),
-        [account.address]
-    )
-    Test.expect(result, Test.beSucceeded())
-    return result.returnValue! as! AaveWrapper.AccountData
+/// Deploys the whole lending-strategy stack in dependency order.
+access(all) fun deploy_lending_strategy_stack() {
+    deploy_aave_v3_pool()
+    deploy_aave_v3_price_oracle()
+    deploy_flow_yield_vaults_interfaces()
+    deploy_flow_yield_vaults()
+    deploy_flow_yield_vaults_early_access()
+    deploy_flow_yield_vaults_lending_strategies()
+    deploy_mock_swapper()
 }
 
-/// Read the debt balance held inside the account's public YieldVault strategy.
-access(all) fun get_strategy_debt(account: Test.TestAccount): UFix64 {
-    let result = Test.executeScript(
-        Test.readFile("cadence/scripts/GetStrategyDebt.cdc"),
-        [account.address]
-    )
-    Test.expect(result, Test.beSucceeded())
-    return result.returnValue! as! UFix64
-}
+// -----------------------------------------------------------------------------
+// Transactions
+// -----------------------------------------------------------------------------
 
-/// Run `cadence/transactions/SetupPosition.cdc` as `account`.
 access(all) fun execute_setup_position(account: Test.TestAccount) {
     let result = Test.executeTransaction(Test.Transaction(
         code: Test.readFile("cadence/transactions/SetupPosition.cdc"),
@@ -90,38 +109,6 @@ access(all) fun execute_setup_position(account: Test.TestAccount) {
     Test.expect(result, Test.beSucceeded())
 }
 
-/// Read a FungibleToken.Vault balance at `path` in the account's storage.
-access(all) fun get_vault_balance(account: Test.TestAccount, path: StoragePath): UFix64 {
-    let result = Test.executeScript(
-        Test.readFile("cadence/scripts/GetVaultBalance.cdc"),
-        [account.address, path]
-    )
-    Test.expect(result, Test.beSucceeded())
-    return result.returnValue! as! UFix64
-}
-
-/// Read the ERC20 balance held by the account's Position COA.
-access(all) fun get_erc20_balance(account: Test.TestAccount, tokenHex: String): UInt256 {
-    let result = Test.executeScript(
-        Test.readFile("cadence/scripts/GetErc20Balance.cdc"),
-        [account.address, tokenHex]
-    )
-    Test.expect(result, Test.beSucceeded())
-    return result.returnValue! as! UInt256
-}
-
-/// Read AaveWrapper's `AccountData` view for an account.
-access(all) fun get_account_data(account: Test.TestAccount): AaveWrapper.AccountData {
-    let result = Test.executeScript(
-        Test.readFile("cadence/scripts/GetAccountData.cdc"),
-        [account.address]
-    )
-    Test.expect(result, Test.beSucceeded())
-    return result.returnValue! as! AaveWrapper.AccountData
-}
-
-/// Run SupplyFlowBorrowPyusd.cdc: wrap `flowAmount` FLOW → WFLOW, supply it,
-/// then borrow `pyusd0Amount` PYUSD0 (6 decimals) to the COA.
 access(all) fun execute_supply_flow_borrow_pyusd(
     account: Test.TestAccount,
     flowAmount: UFix64,
@@ -133,25 +120,9 @@ access(all) fun execute_supply_flow_borrow_pyusd(
         signers: [account],
         arguments: [flowAmount, pyusd0Amount]
     ))
-    log(result.computationUsed)
     Test.expect(result, Test.beSucceeded())
 }
 
-/// Deploy the PyusdMinter helper contract to the bridge account
-/// (0x1e4aa0b87d10b141). Required before `execute_supply_pyusd_borrow_wflow`.
-access(all) fun deploy_pyusd_minter() {
-    let bridge = Test.getAccount(0x1e4aa0b87d10b141)
-    let result = Test.executeTransaction(Test.Transaction(
-        code: Test.readFile("cadence/transactions/DeployPyusdMinter.cdc"),
-        authorizers: [bridge.address],
-        signers: [bridge],
-        arguments: [Test.readFile("cadence/contracts/PyusdMinter.cdc")]
-    ))
-    Test.expect(result, Test.beSucceeded())
-}
-
-/// Run SupplyPyusdBorrowWflow.cdc: mint `pyusdSupplyAmount` bridged PYUSD0,
-/// supply it, then borrow `wflowBorrowAmount` WFLOW (18 decimals) to the COA.
 access(all) fun execute_supply_pyusd_borrow_wflow(
     account: Test.TestAccount,
     pyusdSupplyAmount: UFix64,
@@ -164,4 +135,134 @@ access(all) fun execute_supply_pyusd_borrow_wflow(
         arguments: [pyusdSupplyAmount, wflowBorrowAmount]
     ))
     Test.expect(result, Test.beSucceeded())
+}
+
+/// Like `execute_setup_lending_strategy` but wires a real KittyPunch V3
+/// Swapper instead of `MockSwapper`. Requires a fork block with live
+/// WFLOW↔PYUSD0 liquidity.
+access(all) fun execute_setup_lending_strategy_live(account: Test.TestAccount) {
+    let result = Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/SetupLendingStrategyLive.cdc"),
+        authorizers: [account.address],
+        signers: [account],
+        arguments: []
+    ))
+    Test.expect(result, Test.beSucceeded())
+}
+
+/// Constructs a PYUSD0-collateral / FLOW-debt / PYUSD0-yield lending strategy
+/// via MockSwapper, mints a yield vault for `account`, seeds the swapper's
+/// PYUSD0 liquidity pool with `swapperLiquidity`.
+access(all) fun execute_setup_lending_strategy(
+    account: Test.TestAccount,
+    swapperLiquidity: UFix64
+) {
+    let result = Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/SetupLendingStrategy.cdc"),
+        authorizers: [account.address],
+        signers: [account],
+        arguments: [swapperLiquidity]
+    ))
+    Test.expect(result, Test.beSucceeded())
+}
+
+/// Mint `amount` PYUSD0 and deposit it as collateral into the test vault.
+access(all) fun execute_lending_vault_deposit(
+    account: Test.TestAccount,
+    amount: UFix64
+) {
+    let result = Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/LendingVaultDeposit.cdc"),
+        authorizers: [account.address],
+        signers: [account],
+        arguments: [amount]
+    ))
+    Test.expect(result, Test.beSucceeded())
+}
+
+/// Withdraw `amount` of collateral from the test vault; returned collateral
+/// accumulates at `/storage/withdrawnCollateral` on the signer.
+access(all) fun execute_lending_vault_withdraw(
+    account: Test.TestAccount,
+    amount: UFix64
+) {
+    let result = Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/LendingVaultWithdraw.cdc"),
+        authorizers: [account.address],
+        signers: [account],
+        arguments: [amount]
+    ))
+    Test.expect(result, Test.beSucceeded())
+}
+
+/// Poke the vault's `rebalance()` (currently a no-op stub — see TODO in
+/// `FlowYieldVaultsLendingStrategies.LendingStrategyVault.rebalance`).
+/// Returns the transaction result so the test can decide how to assert.
+access(all) fun try_lending_vault_rebalance(
+    account: Test.TestAccount
+): Test.TransactionResult {
+    return Test.executeTransaction(Test.Transaction(
+        code: Test.readFile("cadence/transactions/LendingVaultRebalance.cdc"),
+        authorizers: [account.address],
+        signers: [account],
+        arguments: []
+    ))
+}
+
+// -----------------------------------------------------------------------------
+// Scripts
+// -----------------------------------------------------------------------------
+
+access(all) fun get_account_data(account: Test.TestAccount): AaveV3Pool.AccountData {
+    let result = Test.executeScript(
+        Test.readFile("cadence/scripts/GetAccountData.cdc"),
+        [account.address]
+    )
+    Test.expect(result, Test.beSucceeded())
+    return result.returnValue! as! AaveV3Pool.AccountData
+}
+
+access(all) fun get_vault_balance(account: Test.TestAccount, path: StoragePath): UFix64 {
+    let result = Test.executeScript(
+        Test.readFile("cadence/scripts/GetVaultBalance.cdc"),
+        [account.address, path]
+    )
+    Test.expect(result, Test.beSucceeded())
+    return result.returnValue! as! UFix64
+}
+
+access(all) fun get_erc20_balance(account: Test.TestAccount, tokenHex: String): UInt256 {
+    let result = Test.executeScript(
+        Test.readFile("cadence/scripts/GetErc20Balance.cdc"),
+        [account.address, tokenHex]
+    )
+    Test.expect(result, Test.beSucceeded())
+    return result.returnValue! as! UInt256
+}
+
+access(all) fun get_lending_summary(
+    account: Test.TestAccount
+): FlowYieldVaultsLendingStrategies.PositionSummary {
+    let result = Test.executeScript(
+        Test.readFile("cadence/scripts/GetLendingSummary.cdc"),
+        [account.address]
+    )
+    Test.expect(result, Test.beSucceeded())
+    return result.returnValue! as! FlowYieldVaultsLendingStrategies.PositionSummary
+}
+
+/// Balance of the FT vault the withdraw transaction accumulates collateral
+/// into at `/storage/withdrawnCollateral`.
+access(all) fun get_withdrawn_collateral_balance(account: Test.TestAccount): UFix64 {
+    return get_vault_balance(account: account, path: /storage/withdrawnCollateral)
+}
+
+/// Returns `[collateralType, debtType, yieldType]` for the test vault.
+access(all) fun get_lending_types(account: Test.TestAccount): [Type] {
+    let result = Test.executeScript(
+        Test.readFile("cadence/scripts/GetLendingTypes.cdc"),
+        [account.address]
+    )
+    Test.expect(result, Test.beSucceeded())
+    return result.returnValue! as! [Type]
 }
