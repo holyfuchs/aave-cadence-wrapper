@@ -7,6 +7,13 @@
 				"mainnet": "6b00ff876c299c61"
 			}
 		},
+		"YieldVault": {
+			"source": "cadence/contracts/YieldVault.cdc",
+			"aliases": {
+				"testing": "0000000000000007",
+				"mainnet": "6b00ff876c299c61"
+			}
+		},
 		"Counter": {
 			"source": "cadence/contracts/Counter.cdc",
 			"aliases": {

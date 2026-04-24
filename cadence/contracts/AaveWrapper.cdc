@@ -64,12 +64,25 @@ access(all) contract AaveWrapper {
 
     access(all) resource Position: PositionPublic {
         access(self) let coa: @EVM.CadenceOwnedAccount
+        access(self) let feeProvider: Capability<auth(FungibleToken.Withdraw) &FlowToken.Vault>
         access(all) let pool: EVM.EVMAddress
 
-        init(pool: EVM.EVMAddress) {
+        init(
+            pool: EVM.EVMAddress,
+            feeProvider: Capability<auth(FungibleToken.Withdraw) &FlowToken.Vault>
+        ) {
+            pre { feeProvider.check(): "fee provider capability is invalid" }
             self.coa <- EVM.createCadenceOwnedAccount()
+            self.feeProvider = feeProvider
             self.pool = pool
             emit PositionCreated(evmAddress: self.coa.address().toString())
+        }
+
+        /// Borrow the stored fee provider reference. Used internally for every
+        /// Cadence↔EVM bridge call.
+        access(self) fun fees(): auth(FungibleToken.Withdraw) &FlowToken.Vault {
+            return self.feeProvider.borrow()
+                ?? panic("fee provider capability no longer resolves")
         }
 
         access(all) view fun evmAddress(): EVM.EVMAddress {
@@ -82,16 +95,13 @@ access(all) contract AaveWrapper {
         }
 
         /// Bridge `vault` into the COA and supply it to the Pool.
-        access(Manage) fun supply(
-            vault: @{FungibleToken.Vault},
-            feeProvider: auth(FungibleToken.Withdraw) &{FungibleToken.Provider}
-        ) {
+        access(Manage) fun supply(vault: @{FungibleToken.Vault}) {
             let vaultType = vault.getType()
             let asset = FlowEVMBridge.getAssociatedEVMAddress(with: vaultType)
                 ?? panic("No EVM mapping for vault type \(vaultType.identifier)")
 
             let before = self.erc20BalanceOf(token: asset)
-            self.coa.depositTokens(vault: <- vault, feeProvider: feeProvider)
+            self.coa.depositTokens(vault: <- vault, feeProvider: self.fees())
             let amount = self.erc20BalanceOf(token: asset) - before
 
             self.supplyEVM(asset: asset, amount: amount)
@@ -168,8 +178,7 @@ access(all) contract AaveWrapper {
         /// `AaveWrapper.MAX_UINT256` to withdraw the full aToken balance.
         access(Manage) fun withdraw(
             vaultType: Type,
-            amount: UInt256,
-            feeProvider: auth(FungibleToken.Withdraw) &{FungibleToken.Provider}
+            amount: UInt256
         ): @{FungibleToken.Vault} {
             let asset = FlowEVMBridge.getAssociatedEVMAddress(with: vaultType)
                 ?? panic("No EVM mapping for vault type \(vaultType.identifier)")
@@ -189,7 +198,7 @@ access(all) contract AaveWrapper {
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: received,
-                feeProvider: feeProvider
+                feeProvider: self.fees()
             )
         }
 
@@ -197,8 +206,7 @@ access(all) contract AaveWrapper {
         /// existing collateral, bridging it out as a Cadence vault.
         access(Manage) fun borrow(
             vaultType: Type,
-            amount: UInt256,
-            feeProvider: auth(FungibleToken.Withdraw) &{FungibleToken.Provider}
+            amount: UInt256
         ): @{FungibleToken.Vault} {
             let asset = FlowEVMBridge.getAssociatedEVMAddress(with: vaultType)
                 ?? panic("No EVM mapping for vault type \(vaultType.identifier)")
@@ -216,7 +224,7 @@ access(all) contract AaveWrapper {
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: amount,
-                feeProvider: feeProvider
+                feeProvider: self.fees()
             )
         }
 
@@ -224,15 +232,19 @@ access(all) contract AaveWrapper {
         /// Returns any dust left over after repayment (Aave rounds down; extra
         /// tokens that weren't needed to cover the debt come back to the caller).
         access(Manage) fun repay(
-            vault: @{FungibleToken.Vault},
-            feeProvider: auth(FungibleToken.Withdraw) &{FungibleToken.Provider}
+            vault: @{FungibleToken.Vault}
         ): @{FungibleToken.Vault} {
             let vaultType = vault.getType()
             let asset = FlowEVMBridge.getAssociatedEVMAddress(with: vaultType)
                 ?? panic("No EVM mapping for vault type \(vaultType.identifier)")
 
+            // Stash an empty twin of the incoming vault so we have something
+            // to return when the Pool consumes the whole payment (bridge
+            // refuses zero-amount withdrawTokens).
+            let empty <- vault.createEmptyVault()
+
             let before = self.erc20BalanceOf(token: asset)
-            self.coa.depositTokens(vault: <- vault, feeProvider: feeProvider)
+            self.coa.depositTokens(vault: <- vault, feeProvider: self.fees())
             let bridgedIn = self.erc20BalanceOf(token: asset) - before
 
             self.mustCall(
@@ -254,10 +266,14 @@ access(all) contract AaveWrapper {
             let leftover = self.erc20BalanceOf(token: asset) - (before)
             emit Repaid(asset: asset.toString(), amount: bridgedIn - leftover)
 
+            if leftover == 0 {
+                return <- empty
+            }
+            destroy empty
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: leftover,
-                feeProvider: feeProvider
+                feeProvider: self.fees()
             )
         }
 
@@ -339,12 +355,17 @@ access(all) contract AaveWrapper {
         }
     }
 
-    access(all) fun createPosition(pool: EVM.EVMAddress): @Position {
-        return <- create Position(pool: pool)
+    access(all) fun createPosition(
+        pool: EVM.EVMAddress,
+        feeProvider: Capability<auth(FungibleToken.Withdraw) &FlowToken.Vault>
+    ): @Position {
+        return <- create Position(pool: pool, feeProvider: feeProvider)
     }
 
-    access(all) fun createMainnetPosition(): @Position {
-        return <- create Position(pool: self.POOL_MAINNET)
+    access(all) fun createMainnetPosition(
+        feeProvider: Capability<auth(FungibleToken.Withdraw) &FlowToken.Vault>
+    ): @Position {
+        return <- create Position(pool: self.POOL_MAINNET, feeProvider: feeProvider)
     }
 
     init() {

@@ -4,22 +4,9 @@ import "EVM"
 import "FungibleToken"
 import "FlowToken"
 
-/// Mirror of SupplyFlowBorrowPyusd.cdc — supply PYUSD0 as collateral, borrow
-/// WFLOW. Uses PyusdMinter (deployed to the bridge account during test setup)
-/// to fabricate PYUSD0 since no faucet exists on mainnet.
+/// Supply PYUSD0 as collateral, borrow WFLOW into the COA.
 transaction(pyusdSupplyAmount: UFix64, wflowBorrowAmount: UInt256) {
-    prepare(signer: auth(Storage, BorrowValue, Capabilities) &Account) {
-        if signer.storage.borrow<&AaveWrapper.Position>(
-            from: AaveWrapper.PositionStoragePath
-        ) == nil {
-            let p <- AaveWrapper.createMainnetPosition()
-            signer.storage.save(<- p, to: AaveWrapper.PositionStoragePath)
-            let cap = signer.capabilities.storage.issue<&{AaveWrapper.PositionPublic}>(
-                AaveWrapper.PositionStoragePath
-            )
-            signer.capabilities.publish(cap, at: AaveWrapper.PositionPublicPath)
-        }
-
+    prepare(signer: auth(Storage, Capabilities) &Account) {
         let position = signer.storage.borrow<auth(AaveWrapper.Manage) &AaveWrapper.Position>(
             from: AaveWrapper.PositionStoragePath
         )!
@@ -28,13 +15,11 @@ transaction(pyusdSupplyAmount: UFix64, wflowBorrowAmount: UInt256) {
             from: /storage/flowTokenVault
         )!
 
-        // Gas for the COA's EVM calls.
         let gas <- flowVault.withdraw(amount: 10.0)
         position.depositFlow(from: <- gas)
 
-        // Mint PYUSD0 as a Cadence FT, then supply (bridges to ERC20, approves, supplies).
         let pyusdVault <- PyusdMinter.mint(amount: pyusdSupplyAmount)
-        position.supply(vault: <- pyusdVault, feeProvider: flowVault)
+        position.supply(vault: <- pyusdVault)
 
         let pyusd0Addr = EVM.addressFromString("99af3eea856556646c98c8b9b2548fe815240750")
         let wflowAddr = EVM.addressFromString("d3bf53dac106a0290b0483ecbc89d40fcc961f3e")
