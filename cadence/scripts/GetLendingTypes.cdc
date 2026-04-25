@@ -1,11 +1,12 @@
-import "FlowYieldVaultsLendingStrategies"
+import "LendingStrategyV1"
+import "FlowYieldVaultsRegistry"
 
-/// Returns `[collateralType, debtType, yieldType]` for the test vault.
-access(all) fun main(owner: Address): [Type] {
-    let acct = getAuthAccount<auth(BorrowValue) &Account>(owner)
-    let vault = acct.storage
-        .borrow<&FlowYieldVaultsLendingStrategies.LendingStrategyVault>(
-            from: /storage/LendingTestVault
-        ) ?? panic("no test vault")
-    return [vault.collateralType(), vault.debtType(), vault.yieldType()]
+/// `[collateralType, debtType, yieldType]` for the registered profile.
+access(all) fun main(profileName: String): [Type] {
+    let publicPath = PublicPath(identifier: "lendingStrategyV1Profile_\(profileName)")!
+    let registry = getAccount(FlowYieldVaultsRegistry.adminAddress())
+    let profile = registry.capabilities
+        .borrow<&LendingStrategyV1.Profile>(publicPath)
+        ?? panic("no profile published under \(profileName)")
+    return [profile.collateralType(), profile.debtType(), profile.yieldType()]
 }

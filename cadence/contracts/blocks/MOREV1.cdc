@@ -3,7 +3,7 @@ import "FungibleToken"
 import "FlowToken"
 import "FlowEVMBridge"
 
-/// Wrapper over an Aave v3 Pool on FlowEVM (MORE Markets by default).
+/// Wrapper over the MORE Markets lending pool on FlowEVM.
 ///
 /// A `Position` owns a COA (its EVM address = the Aave user). The contract
 /// account's FlowToken vault at `/storage/flowTokenVault` pays Cadence-side
@@ -13,7 +13,7 @@ import "FlowEVMBridge"
 /// and `Type`) sits next to a raw-EVM path (`supplyEVM / borrowEVM / …`)
 /// that takes `EVMAddress + UInt256` for flows that don't round-trip the
 /// bridge (native-FLOW→WFLOW, DEX swaps, etc.).
-access(all) contract AaveV3Pool {
+access(all) contract MOREV1 {
 
     access(all) entitlement Manage
 
@@ -139,40 +139,40 @@ access(all) contract AaveV3Pool {
 
         access(Manage) fun deposit(from: @{FungibleToken.Vault}) {
             let vaultType = from.getType()
-            let asset = AaveV3Pool.assetFor(vaultType)
+            let asset = MOREV1.assetFor(vaultType)
             let before = self.erc20BalanceOf(token: asset)
-            self.coa.depositTokens(vault: <- from, feeProvider: AaveV3Pool.fees())
+            self.coa.depositTokens(vault: <- from, feeProvider: MOREV1.fees())
             let amount = self.erc20BalanceOf(token: asset) - before
             self.supplyEVM(asset: asset, amount: amount)
         }
 
         access(Manage) fun borrow(vaultType: Type, amount: UInt256): @{FungibleToken.Vault} {
-            self.borrowEVM(asset: AaveV3Pool.assetFor(vaultType), amount: amount)
+            self.borrowEVM(asset: MOREV1.assetFor(vaultType), amount: amount)
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: amount,
-                feeProvider: AaveV3Pool.fees()
+                feeProvider: MOREV1.fees()
             )
         }
 
         access(Manage) fun withdraw(vaultType: Type, amount: UInt256): @{FungibleToken.Vault} {
-            let asset = AaveV3Pool.assetFor(vaultType)
+            let asset = MOREV1.assetFor(vaultType)
             let before = self.erc20BalanceOf(token: asset)
             self.withdrawEVM(asset: asset, amount: amount)
             let received = self.erc20BalanceOf(token: asset) - before
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: received,
-                feeProvider: AaveV3Pool.fees()
+                feeProvider: MOREV1.fees()
             )
         }
 
         access(Manage) fun repay(vault: @{FungibleToken.Vault}): @{FungibleToken.Vault} {
             let vaultType = vault.getType()
-            let asset = AaveV3Pool.assetFor(vaultType)
+            let asset = MOREV1.assetFor(vaultType)
             let empty <- vault.createEmptyVault()
             let before = self.erc20BalanceOf(token: asset)
-            self.coa.depositTokens(vault: <- vault, feeProvider: AaveV3Pool.fees())
+            self.coa.depositTokens(vault: <- vault, feeProvider: MOREV1.fees())
             let bridgedIn = self.erc20BalanceOf(token: asset) - before
             self.repayEVM(asset: asset, amount: bridgedIn)
             let leftover = self.erc20BalanceOf(token: asset) - before
@@ -183,13 +183,13 @@ access(all) contract AaveV3Pool {
             return <- self.coa.withdrawTokens(
                 type: vaultType,
                 amount: leftover,
-                feeProvider: AaveV3Pool.fees()
+                feeProvider: MOREV1.fees()
             )
         }
 
         access(Manage) fun setUseAsCollateral(vaultType: Type, useAsCollateral: Bool) {
             self.setUseAsCollateralEVM(
-                asset: AaveV3Pool.assetFor(vaultType),
+                asset: MOREV1.assetFor(vaultType),
                 useAsCollateral: useAsCollateral
             )
         }
@@ -236,9 +236,9 @@ access(all) contract AaveV3Pool {
             //   debtTokens_raw = additionalDebtBase × 10^decimals / priceUsd_8
             let priceUsd8 = UInt256(UInt64(debtPriceUsd * 100_000_000.0))
             if priceUsd8 == 0 { return 0 }
-            let asset = AaveV3Pool.assetFor(vaultType)
+            let asset = MOREV1.assetFor(vaultType)
             let decimals = self.erc20Decimals(token: asset)
-            let scale = AaveV3Pool.tenToThe(decimals)
+            let scale = MOREV1.tenToThe(decimals)
             return additionalDebtBase * scale / priceUsd8
         }
 
@@ -266,7 +266,7 @@ access(all) contract AaveV3Pool {
                 to: self.pool,
                 data: EVM.encodeABIWithSignature(
                     "borrow(address,uint256,uint256,uint16,address)",
-                    [asset, amount, AaveV3Pool.VARIABLE_RATE, 0 as UInt16, self.coa.address()]
+                    [asset, amount, MOREV1.VARIABLE_RATE, 0 as UInt16, self.coa.address()]
                 ),
                 gasLimit: 600_000
             )
@@ -283,7 +283,7 @@ access(all) contract AaveV3Pool {
                 to: self.pool,
                 data: EVM.encodeABIWithSignature(
                     "repay(address,uint256,uint256,address)",
-                    [asset, amount, AaveV3Pool.VARIABLE_RATE, self.coa.address()]
+                    [asset, amount, MOREV1.VARIABLE_RATE, self.coa.address()]
                 ),
                 gasLimit: 500_000
             )
@@ -402,14 +402,26 @@ access(all) contract AaveV3Pool {
     access(all) fun fees(): auth(FungibleToken.Withdraw) &FlowToken.Vault {
         return self.account.storage
             .borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
-            ?? panic("AaveV3Pool contract account has no FlowToken vault to pay bridge fees")
+            ?? panic("MOREV1 contract account has no FlowToken vault to pay bridge fees")
+    }
+
+    /// Top up the contract-account FlowToken vault used to pay bridge fees.
+    access(all) fun fundFees(from: @{FungibleToken.Vault}) {
+        let flow <- from as! @FlowToken.Vault
+        if let existing = self.account.storage.borrow<&FlowToken.Vault>(from: /storage/flowTokenVault) {
+            existing.deposit(from: <- flow)
+        } else {
+            let fresh <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            fresh.deposit(from: <- flow)
+            self.account.storage.save(<- fresh, to: /storage/flowTokenVault)
+        }
     }
 
     init() {
         self.VARIABLE_RATE = 2
         self.MAX_UINT256 = UInt256.max
         self.POOL_MAINNET = EVM.addressFromString("bC92aaC2DBBF42215248B5688eB3D3d2b32F2c8d")
-        self.PositionStoragePath = /storage/AaveV3PoolPosition
-        self.PositionPublicPath = /public/AaveV3PoolPosition
+        self.PositionStoragePath = /storage/MOREV1Position
+        self.PositionPublicPath = /public/MOREV1Position
     }
 }

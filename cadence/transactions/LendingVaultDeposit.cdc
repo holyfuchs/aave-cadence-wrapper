@@ -1,18 +1,14 @@
 import PyusdMinter from 0x1e4aa0b87d10b141
-import "FungibleToken"
-import "FlowToken"
-import "FlowYieldVaultsLendingStrategies"
-import "FlowYieldVaultsInterfaces"
+import "LendingStrategyV1"
 
-/// Mint `amount` PYUSD0 and deposit it into the pre-configured lending vault
-/// at /storage/LendingTestVault.
+/// Mint `amount` PYUSD0 and deposit into the test Vault at
+/// `/storage/LendingTestVault`. The Vault self-resolves its Profile via
+/// its stored `profileCap`.
 transaction(amount: UFix64) {
     prepare(signer: auth(BorrowValue) &Account) {
-        let vault = signer.storage.borrow<&{FlowYieldVaultsInterfaces.YieldVault}>(
+        let vault = signer.storage.borrow<&LendingStrategyV1.Vault>(
             from: /storage/LendingTestVault
-        ) ?? panic("no test vault — run SetupLendingStrategy first")
-
-        let pyusd <- PyusdMinter.mint(amount: amount)
-        vault.deposit(from: <- pyusd)
+        ) ?? panic("no test vault — run CreateLendingVault first")
+        vault.deposit(from: <- PyusdMinter.mint(amount: amount))
     }
 }

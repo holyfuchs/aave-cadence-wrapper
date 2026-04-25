@@ -1,64 +1,113 @@
 {
 	"contracts": {
-		"AaveV3Pool": {
-			"source": "cadence/contracts/AaveV3Pool.cdc",
+		"ERC4626SwapperV1": {
+			"source": "cadence/contracts/blocks/swappers/ERC4626SwapperV1.cdc",
 			"aliases": {
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007"
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		},
-		"AaveV3PriceOracle": {
-			"source": "cadence/contracts/AaveV3PriceOracle.cdc",
+		"EventCallbackV1": {
+			"source": "cadence/contracts/blocks/EventCallbackV1.cdc",
 			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
-			}
-		},
-		"FlowYieldVaults": {
-			"source": "cadence/contracts/FlowYieldVaults.cdc",
-			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
-			}
-		},
-		"FlowYieldVaultsEarlyAccess": {
-			"source": "cadence/contracts/FlowYieldVaultsEarlyAccess.cdc",
-			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		},
 		"FlowYieldVaultsInterfaces": {
 			"source": "cadence/contracts/FlowYieldVaultsInterfaces.cdc",
 			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		},
-		"FlowYieldVaultsLendingStrategies": {
-			"source": "cadence/contracts/FlowYieldVaultsLendingStrategies.cdc",
+		"FlowYieldVaultsRegistry": {
+			"source": "cadence/contracts/FlowYieldVaultsRegistry.cdc",
 			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"LendingStrategyV1": {
+			"source": "cadence/contracts/strategies/LendingStrategyV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"LimitedAccessV1": {
+			"source": "cadence/contracts/blocks/LimitedAccessV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"MOREOracleV1": {
+			"source": "cadence/contracts/blocks/MOREOracleV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"MOREV1": {
+			"source": "cadence/contracts/blocks/MOREV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		},
 		"MockSwapper": {
 			"source": "cadence/tests/mocks/MockSwapper.cdc",
 			"aliases": {
-				"emulator": "0000000000000007",
-				"mainnet": "6b00ff876c299c61",
-				"testing": "0000000000000007",
-				"testnet": "0000000000000007"
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"MorphoERC4626SwapperV1": {
+			"source": "cadence/contracts/blocks/swappers/MorphoERC4626SwapperV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"PassHolderMock": {
+			"source": "cadence/tests/mocks/PassHolderMock.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		},
 		"PyusdMinter": {
@@ -68,6 +117,46 @@
 				"mainnet": "1e4aa0b87d10b141",
 				"testing": "1e4aa0b87d10b141",
 				"testnet": "1e4aa0b87d10b141"
+			}
+		},
+		"ResourceMock": {
+			"source": "cadence/tests/mocks/ResourceMock.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"UniswapV2SwapperV1": {
+			"source": "cadence/contracts/blocks/swappers/UniswapV2SwapperV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"UniswapV3SwapperV1": {
+			"source": "cadence/contracts/blocks/swappers/UniswapV3SwapperV1.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
+			}
+		},
+		"VaultHolderMock": {
+			"source": "cadence/tests/mocks/VaultHolderMock.cdc",
+			"aliases": {
+				"emulator": "04f5ae6bef48c1fc",
+				"mainnet": "04f5ae6bef48c1fc",
+				"mainnet-fork": "04f5ae6bef48c1fc",
+				"testing": "04f5ae6bef48c1fc",
+				"testnet": "04f5ae6bef48c1fc"
 			}
 		}
 	},
@@ -106,61 +195,6 @@
 			"block_height": 149390168,
 			"aliases": {
 				"mainnet": "1e4aa0b87d10b141"
-			}
-		},
-		"MOET": {
-			"source": "mainnet://6b00ff876c299c61.MOET",
-			"aliases": {
-				"mainnet": "6b00ff876c299c61",
-				"testing": "6b00ff876c299c61"
-			}
-		},
-		"EVMAbiHelpers": {
-			"source": "mainnet://a7825d405ac89518.EVMAbiHelpers",
-			"aliases": {
-				"mainnet": "a7825d405ac89518",
-				"testing": "a7825d405ac89518"
-			}
-		},
-		"EVMAmountUtils": {
-			"source": "mainnet://43c9e8bfec507db4.EVMAmountUtils",
-			"aliases": {
-				"mainnet": "43c9e8bfec507db4",
-				"testing": "43c9e8bfec507db4"
-			}
-		},
-		"SwapConnectors": {
-			"source": "mainnet://e1a479f0cb911df9.SwapConnectors",
-			"aliases": {
-				"mainnet": "e1a479f0cb911df9",
-				"testing": "e1a479f0cb911df9"
-			}
-		},
-		"UniswapV3SwapConnectors": {
-			"source": "mainnet://a7825d405ac89518.UniswapV3SwapConnectors",
-			"aliases": {
-				"mainnet": "a7825d405ac89518",
-				"testing": "a7825d405ac89518"
-			}
-		},
-		"DeFiActions": {
-			"source": "mainnet://6d888f175c158410.DeFiActions",
-			"hash": "e59644f8cef80c608c783c0f52131842d45dacbe9aee188b68de5e9fbc484832",
-			"block_height": 149485526,
-			"aliases": {
-				"mainnet": "6d888f175c158410",
-				"testing": "6d888f175c158410",
-				"testnet": "0b11b1848a8aa2c0"
-			}
-		},
-		"DeFiActionsUtils": {
-			"source": "mainnet://6d888f175c158410.DeFiActionsUtils",
-			"hash": "f3ee7f02ec7373742172f08302471f7b16c44fc0e8deba1efeb50b4367610224",
-			"block_height": 149485526,
-			"aliases": {
-				"mainnet": "6d888f175c158410",
-				"testing": "6d888f175c158410",
-				"testnet": "0b11b1848a8aa2c0"
 			}
 		},
 		"EVM": {
@@ -363,6 +397,14 @@
 				"mainnet": "1e4aa0b87d10b141"
 			}
 		},
+		"MOET": {
+			"source": "mainnet://6b00ff876c299c61.MOET",
+			"hash": "45dc87539777207f4a6a9230ba2f218f0adc05819b0a4e7f707f2299f0abf16b",
+			"block_height": 149582515,
+			"aliases": {
+				"mainnet": "6b00ff876c299c61"
+			}
+		},
 		"MetadataViews": {
 			"source": "mainnet://1d7e57aa55817448.MetadataViews",
 			"hash": "b290b7906d901882b4b62e596225fb2f10defb5eaaab4a09368f3aee0e9c18b1",
@@ -427,6 +469,13 @@
 				"type": "file",
 				"location": "emulator-account.pkey"
 			}
+		}
+	},
+	"deployments": {
+		"emulator": {
+			"emulator-account": [
+				"MOET"
+			]
 		}
 	}
 }
